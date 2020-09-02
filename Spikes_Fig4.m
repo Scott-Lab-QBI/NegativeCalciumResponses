@@ -126,6 +126,27 @@ for i=1:length(IdealSpikes_bin)
     Suite2pSpikesResults(i).mean_correl=mean(diag(Suite2pSpikes{i,2}));
 end
 
+%% Same with the DL approach (CASCADE)
+%Had to go from z-scored to DF data, we used a global mean to generate the
+%DF/F to avoid the moving window issue from Fig.1
+
+load('C:\Data\Inhibited neurons\NAOMI\predictions_df_traces_all.mat')
+spike_rates_all=spike_rates;
+CascadeSpikes={};num_temp=1;
+CascadeSpikesResults=struct();
+for i=1:length(IdealSpikes_bin)
+    spike_rates=spike_rates_all(num_temp:num_temp-1+size(IdealSpikes_bin{i},1),:);
+    spike_rates(isnan(spike_rates))=0;
+    CascadeSpikes{i,1}=spike_rates;
+    CascadeSpikes{i,2}=pdist2(CascadeSpikes{i,1},IdealSpikes_bin{i},'correlation');
+    CascadeSpikesResults(i).Neg_correl_max=nanmax(1-CascadeSpikes{i,2}(IdealNegIdx{i},:),[],2);
+    temp=diag(CascadeSpikes{i,2});
+    CascadeSpikesResults(i).Neg_correl=1-temp(IdealNegIdx{i});
+    CascadeSpikesResults(i).Pos_correl_max=nanmax(1-CascadeSpikes{i,2}(setdiff(1:end,IdealNegIdx{i}),:),[],2);
+    CascadeSpikesResults(i).Pos_correl=1-temp(setdiff(1:end,IdealNegIdx{i}));
+    CascadeSpikesResults(i).mean_correl=nanmean(diag(CascadeSpikes{i,2}));
+    num_temp=num_temp+size(IdealSpikes_bin{i},1);
+end
 
 
 %%
@@ -136,9 +157,11 @@ for i=1:length(IdealSpikes_bin)
     MeanCorrel(i,3)=mean(CellSortSpikesResults(i).Pos_correl);
     MeanCorrel(i,1)=mean(CaImAnSpikesResults(i).Pos_correl);
     MeanCorrel(i,2)=mean(Suite2pSpikesResults(i).Pos_correl);
-    MeanCorrel(i,7)=mean(CellSortSpikesResults(i).Neg_correl);
-    MeanCorrel(i,5)=mean(CaImAnSpikesResults(i).Neg_correl);
-    MeanCorrel(i,6)=mean(Suite2pSpikesResults(i).Neg_correl);
+    MeanCorrel(i,4)=mean(CascadeSpikesResults(i).Pos_correl);
+    MeanCorrel(i,8)=mean(CellSortSpikesResults(i).Neg_correl);
+    MeanCorrel(i,6)=mean(CaImAnSpikesResults(i).Neg_correl);
+    MeanCorrel(i,7)=mean(Suite2pSpikesResults(i).Neg_correl);
+    MeanCorrel(i,9)=mean(CascadeSpikesResults(i).Neg_correl);
 end
 
 
@@ -167,6 +190,15 @@ plot(x,zscore(PCAICASpikes{1}(1,:)),'color',[166 33 255]/255,'LineWidth',2);
 hold on;plot(x,zscore(PCAICASpikes{1}(2,:)),'color',[89 255 0]/255,'LineWidth',2);xlim([0 40]);set(gca,'FontSize',14);set(gca,'fontname','arial')
 print(Fighandle,strcat('I:\INHIB2020-Q2046\Manuscript\Draft\Figure 4\','PCAICASpikesPosNeg'),'-dsvg','-r0');
 print(Fighandle,strcat('I:\INHIB2020-Q2046\Manuscript\Draft\Figure 4\','PCAICASpikesPosNeg'),'-depsc','-r0');
+
+x=linspace(0,size(idealTraces,2)/5,size(idealTraces,2));
+Fighandle=figure;
+set(Fighandle, 'Position', [100, 100, 600, 600]);
+plot(x,zscore(CascadeSpikes{1}(1,:)),'color',[166 33 255]/255,'LineWidth',2);
+hold on;plot(x,zscore(CascadeSpikes{1}(2,:)),'color',[89 255 0]/255,'LineWidth',2);xlim([0 40]);set(gca,'FontSize',14);set(gca,'fontname','arial')
+print(Fighandle,strcat('R:\INHIB2020-Q2046\Manuscript\Draft\Figure 4\','CascadePosNeg'),'-dsvg','-r0');
+print(Fighandle,strcat('R:\INHIB2020-Q2046\Manuscript\Draft\Figure 4\','CascadePosNeg'),'-depsc','-r0');
+
 
 %% binarized spikes
 
@@ -197,6 +229,17 @@ for i=1:length(IdealSpikes_bin)
         Suite2pSpikes_cat=vertcat(Suite2pSpikes_cat,Suite2pSpikes{i,1});
     end    
 end
+
+
+CascadeSpikes_cat=[];
+for i=1:length(IdealSpikes_bin)
+    if i==1
+        CascadeSpikes_cat=CascadeSpikes{i,1};
+    else
+        CascadeSpikes_cat=vertcat(CascadeSpikes_cat,CascadeSpikes{i,1});
+    end    
+end
+
 
 bg_idxC=zeros(1,10);
 for i=1:10
@@ -250,4 +293,18 @@ for i=bg_idxC
     rectangle('FaceColor','r','Position',[0 i-0.5 1000 1],'EdgeColor','none');
 end
 print(Fighandle,strcat('C:\Data\Inhibited neurons\Figures\CellSortIdealSpikes_binary'),'-dsvg','-r0');
+
+Fighandle=figure;
+set(Fighandle, 'Position', [100, 100, 600, 1200]);
+imagesc(zscore(CascadeSpikes_cat,1,2),[-3 6]);colormap(PurpGreen)
+for i=bg_idxC
+    rectangle('FaceColor','w','Position',[0 i-0.5 1000 1],'EdgeColor','none');
+end
+print(Fighandle,strcat('R:\INHIB2020-Q2046\Manuscript\Draft\SuppFig\CascadeIdealSpikes'),'-dsvg','-r0');
+
+imagesc(CascadeSpikes_cat>mean(CascadeSpikes_cat(:)));colormap gray
+for i=bg_idxC
+    rectangle('FaceColor','r','Position',[0 i-0.5 1000 1],'EdgeColor','none');
+end
+print(Fighandle,strcat('R:\INHIB2020-Q2046\Manuscript\Draft\SuppFig\CascadeIdealSpikes_binary'),'-dsvg','-r0');
 clearvars i Fighandle j k test temp spks Spikes bg_idxC

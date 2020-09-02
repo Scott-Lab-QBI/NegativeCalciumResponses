@@ -168,12 +168,12 @@ for i=1:length(File_list_NAOMI)
     load(strrep(File_list_NAOMI(i).name,'.mat','_output_analysis_matlab.mat'), 'ROIs_dense');
     load(strrep(File_list_NAOMI(i).name,'.mat','_output_analysis_matlab.mat'), 'idx_components');
     comps=comps(:,:,(idealTraces(1:size(idealTraces,1)-1,1)>0));
-    ROIs_Suite2p=zeros(size(Correlation_image,1),size(Correlation_image,1),length(stat));
+    ROIs_Suite2p=zeros(ops.Lx,ops.Ly,length(stat));
     for ij=1:length(stat)
-        for ik=1:sum(~stat{1,ij}.overlap)
-            idx_temp=find(~stat{1,ij}.overlap);
-            ROIs_Suite2p(stat{1,ij}.ypix(idx_temp(ik))+1,stat{1,ij}.xpix(idx_temp(ik))+1,ij)=ij;
-        end       
+        temp=[stat{ij}.ypix;stat{ij}.xpix];
+        for ik=1:length(temp)
+            ROIs_Suite2p(temp(1,ik)+1,temp(2,ik)+1,ij)=stat{ij}.lam(ik);
+        end
     end
     temp=nan(size(comps,3),size(ROIs_Suite2p,3));
     for ij=1:size(comps,3)
